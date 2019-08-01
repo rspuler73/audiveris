@@ -373,7 +373,7 @@ public class SymbolsEditor
                 "Should we select Shape board by default?");
 
         private final Constant.Boolean selectPatchClassifierBoard = new Constant.Boolean(
-                true,
+                false,
                 "Should we select Patch Classifier board by default?");
 
         private final Constant.Boolean selectBasicClassifierBoard = new Constant.Boolean(
