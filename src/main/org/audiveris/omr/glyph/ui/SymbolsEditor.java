@@ -22,6 +22,7 @@
 package org.audiveris.omr.glyph.ui;
 
 import org.audiveris.omr.classifier.BasicClassifier;
+import org.audiveris.omr.classifier.ui.PatchClassifierBoard;
 import org.audiveris.omr.constant.Constant;
 import org.audiveris.omr.constant.ConstantSet;
 import org.audiveris.omr.glyph.GlyphIndex;
@@ -190,6 +191,11 @@ public class SymbolsEditor
                         sheet.getGlyphIndex().getEntityService(),
                         interController,
                         constants.selectBasicClassifierBoard.isSet()));
+        boards.add(
+                new PatchClassifierBoard(
+                        sheet,
+                        sheet.getLocationService(),
+                        constants.selectPatchClassifierBoard.isSet()));
 
         //        boards.add(
         //                new EvaluationBoard(
@@ -365,6 +371,10 @@ public class SymbolsEditor
         private final Constant.Boolean selectShapeBoard = new Constant.Boolean(
                 true,
                 "Should we select Shape board by default?");
+
+        private final Constant.Boolean selectPatchClassifierBoard = new Constant.Boolean(
+                true,
+                "Should we select Patch Classifier board by default?");
 
         private final Constant.Boolean selectBasicClassifierBoard = new Constant.Boolean(
                 true,

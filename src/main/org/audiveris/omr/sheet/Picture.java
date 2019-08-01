@@ -24,6 +24,7 @@ package org.audiveris.omr.sheet;
 import ij.process.ByteProcessor;
 import ij.process.ColorProcessor;
 
+import org.audiveris.omr.classifier.PatchClassifier;
 import org.audiveris.omr.constant.Constant;
 import org.audiveris.omr.constant.ConstantSet;
 import org.audiveris.omr.glyph.Glyph;
@@ -37,6 +38,7 @@ import org.audiveris.omr.image.PixelSource;
 import static org.audiveris.omr.run.Orientation.VERTICAL;
 import org.audiveris.omr.run.RunTable;
 import org.audiveris.omr.run.RunTableFactory;
+import org.audiveris.omr.sheet.Scale.Size;
 import org.audiveris.omr.sheet.grid.LineInfo;
 import org.audiveris.omr.ui.selection.LocationEvent;
 import org.audiveris.omr.ui.selection.MouseMovement;
@@ -532,6 +534,19 @@ public class Picture
                 src = buildNoStaffBuffer();
 
                 break;
+
+            case SMALL_TARGET:
+                // Scale small staves to expected patch classifier interline
+                src = buildTarget(Size.SMALL);
+
+                break;
+
+            case LARGE_TARGET:
+                // Scale large staves to expected patch classifier interline
+                src = buildTarget(Size.LARGE);
+
+                break;
+
             default:
                 logger.error("Source " + key + " is not yet supported");
             }
@@ -744,6 +759,9 @@ public class Picture
     public void store (Path sheetFolder,
                        Path oldSheetFolder)
     {
+//        // Initial image, if any
+//        initialHolder.storeData(sheetFolder, oldSheetFolder);
+//
         // Each handled table
         for (RunTableHolder holder : tables.values()) {
             holder.storeData(sheetFolder, oldSheetFolder);
@@ -855,6 +873,57 @@ public class Picture
         return new ByteProcessor(img);
     }
 
+    //-------------//
+    // buildTarget //
+    //-------------//
+    /**
+     * Build a scaled buffer meant for page / patch classifier.
+     * <p>
+     * We use the binary image, rather than the initial gray image.
+     *
+     * @param size the target staff size, either LARGE or SMALL
+     * @return the properly scaled buffer
+     */
+    private ByteProcessor buildTarget (Size size)
+    {
+        final Scale scale = sheet.getScale();
+
+        if (scale == null) {
+            logger.error("No scale defined yet for sheet");
+
+            return null;
+        }
+
+        // We use BINARY as source
+        final ByteProcessor source = getSource(SourceKey.BINARY);
+
+        final int target = PatchClassifier.getPatchInterline();
+
+        switch (size) {
+        case SMALL: {
+            final Integer smallInterline = scale.getSmallInterline();
+
+            if (smallInterline == null) {
+                logger.warn("No small interline in this sheet");
+
+                return null;
+            }
+
+            final double ratio = (double) target / smallInterline;
+
+            return (ratio != 1.0) ? scaledBuffer(source, ratio) : source;
+        }
+
+        default:
+        case LARGE: {
+            final int interline = scale.getInterline();
+            final double ratio = (double) target / interline;
+
+            return (ratio != 1.0) ? scaledBuffer(source, ratio) : source;
+        }
+        }
+    }
+
     //--------------//
     // getStrongRef //
     //--------------//
@@ -875,6 +944,29 @@ public class Picture
         }
 
         return null;
+    }
+
+    //--------------//
+    // scaledBuffer //
+    //--------------//
+    /**
+     * Report a scaled version of the provided buffer, according to the desired ratio.
+     *
+     * @param binBuffer initial (binary) buffer
+     * @param ratio     desired ratio
+     * @return the scaled buffer (no longer binary)
+     */
+    private ByteProcessor scaledBuffer (ByteProcessor binBuffer,
+                                        double ratio)
+    {
+        final int scaledWidth = (int) Math.ceil(binBuffer.getWidth() * ratio);
+        final int scaledHeight = (int) Math.ceil(binBuffer.getHeight() * ratio);
+        final ByteProcessor scaledBuffer = (ByteProcessor) binBuffer.resize(
+                scaledWidth,
+                scaledHeight,
+                true); // True => use averaging when down-scaling
+
+        return scaledBuffer;
     }
 
     //----------------//
@@ -905,7 +997,11 @@ public class Picture
         /** The Median-filtered source. */
         MEDIAN,
         /** The source with staff lines removed. */
-        NO_STAFF;
+        NO_STAFF,
+        /** The source for classifier on small staves, if any. */
+        SMALL_TARGET,
+        /** The source for classifier on large staves. */
+        LARGE_TARGET;
     }
 
     /**

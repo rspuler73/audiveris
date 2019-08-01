@@ -17,6 +17,7 @@ nbproject
 .nb-gradle/*
 .nb-gradle-properties
 *.exe
+*.h5
 *.lnk
 *.log
 *.mf
